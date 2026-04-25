@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Arrivages — Épicerie Paysanne</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:        #f2ede4;
+      --col-bg:    #e8e1d5;
+      --card-bg:   #faf8f4;
+      --border:    #d8d0c2;
+      --text-dark: #1a1714;
+      --text-mid:  #6b6155;
+      --text-soft: #9c9082;
+      --badge-bg:  #dbeafe;
+      --badge-txt: #1e40af;
+      --accent:    #b85c2a;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 100vh; }
+
+    header {
+      background: var(--text-dark);
+      padding: 18px 28px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .header-left h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 20px;
+      font-weight: 600;
+      color: #f2ede4;
+    }
+    .header-left .subtitle {
+      font-size: 11px;
+      color: #9c9082;
+      margin-top: 2px;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+    .header-right { display: flex; align-items: center; gap: 14px; }
+    .status { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #9c9082; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: #9c9082; transition: background .3s; flex-shrink: 0; }
+    .dot.live    { background: #4ade80; box-shadow: 0 0 6px #4ade8088; }
+    .dot.loading { background: #facc15; animation: pulse 1s infinite; }
+    .dot.error   { background: #f87171; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+    .refresh-btn {
+      background: none;
+      border: 1px solid #3a3530;
+      color: #9c9082;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 11px;
+      padding: 5px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all .2s;
+    }
+    .refresh-btn:hover { border-color: #f2ede4; color: #f2ede4; }
+
+    .progress-wrap { height: 2px; background: #2a2520; overflow: hidden; }
+    .progress-bar  { height: 100%; background: #2d5a27; width: 100%; transform-origin: left; }
+
+    .meta-bar {
+      padding: 10px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+    }
+    .meta-info { font-size: 11px; color: var(--text-soft); }
+    .meta-info strong { color: var(--text-mid); font-weight: 500; }
+    .interval-select {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 11px;
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-mid);
+      padding: 4px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .board-wrap { padding: 20px 24px 32px; overflow-x: auto; }
+    .board { display: flex; gap: 12px; align-items: flex-start; min-width: max-content; }
+
+    .col { width: 220px; display: flex; flex-direction: column; }
+    .col-header {
+      padding: 0 2px 10px;
+      border-bottom: 2px solid var(--text-dark);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+    }
+    .col-day   { font-family: 'Playfair Display', serif; font-size: 15px; font-weight: 500; color: var(--text-dark); }
+    .col-count { font-size: 10px; font-weight: 500; color: var(--text-soft); background: var(--col-bg); padding: 2px 6px; border-radius: 99px; }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      animation: fadeIn .2s ease both;
+    }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:none} }
+
+    .card-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; margin-bottom: 2px; }
+    .card-title     { font-size: 12.5px; font-weight: 500; color: var(--text-dark); line-height: 1.35; flex: 1; }
+    .badge          { font-size: 9.5px; font-weight: 500; background: var(--badge-bg); color: var(--badge-txt); padding: 2px 6px; border-radius: 99px; white-space: nowrap; flex-shrink: 0; margin-top: 1px; }
+    .card-time      { font-size: 10.5px; color: var(--text-soft); margin-bottom: 8px; }
+    .card-items     { list-style: none; border-top: 1px solid var(--border); padding-top: 7px; display: flex; flex-direction: column; gap: 3px; }
+    .card-items li  { font-size: 10.5px; color: var(--text-mid); line-height: 1.45; padding-left: 10px; position: relative; }
+    .card-items li::before { content: "–"; position: absolute; left: 0; color: var(--text-soft); }
+
+    .state       { padding: 60px 28px; text-align: center; color: var(--text-soft); font-size: 13px; line-height: 1.7; }
+    .state .icon { font-size: 32px; margin-bottom: 12px; }
+    .error-msg   { color: var(--accent); font-size: 11px; margin-top: 10px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <h1>Épicerie Paysanne · Arrivages</h1>
+    <div class="subtitle">Planning de collectes semaine</div>
+  </div>
+  <div class="header-right">
+    <div class="status">
+      <div class="dot" id="dot"></div>
+      <span id="status-text">Chargement…</span>
+    </div>
+    <button class="refresh-btn" onclick="fetchData()">↻ Actualiser</button>
+  </div>
+</header>
+
+<div class="progress-wrap">
+  <div class="progress-bar" id="progress"></div>
+</div>
+
+<div class="meta-bar">
+  <div class="meta-info">
+    Dernière mise à jour : <strong id="last-update">—</strong>
+    &nbsp;·&nbsp;
+    <span id="total-count">—</span> arrivages
+  </div>
+  <select class="interval-select" id="interval-select" onchange="changeInterval()">
+    <option value="1">Rafraîchir toutes les 1 min</option>
+    <option value="2">Rafraîchir toutes les 2 min</option>
+    <option value="5" selected>Rafraîchir toutes les 5 min</option>
+    <option value="10">Rafraîchir toutes les 10 min</option>
+    <option value="30">Rafraîchir toutes les 30 min</option>
+  </select>
+</div>
+
+<div id="board-container">
+  <div class="state"><div class="icon">⏳</div>Chargement des arrivages…</div>
+</div>
+
+<script>
+  // ── CONFIG ─────────────────────────────────────────────
+  const TEAM_ID  = 't6qSSGdCRhAJHHauW';
+  const DB_ID    = 'agzi4cu61a2b';
+  const TABLE_ID = 'B';          // Module B dans l'URL Ninox
+  const API_KEY  = '8fa2dedf-d9df-4556-b440-dc45c8a6a382';
+
+  // L'API Ninox pagine à 100 enregistrements max — on charge tout
+  const BASE_URL = `https://api.ninox.com/v1/teams/${TEAM_ID}/databases/${DB_ID}/tables/${TABLE_ID}/records`;
+
+  const DAYS = {
+    '1. Monday':    'Lundi',
+    '2. Tuesday':   'Mardi',
+    '3. Wednesday': 'Mercredi',
+    '4. Thursday':  'Jeudi',
+    '5. Friday':    'Vendredi',
+    '6. Saturday':  'Samedi',
+    '7. Sunday':    'Dimanche'
+  };
+
+  let intervalMinutes = 5;
+  let timer = null;
+
+  // ── FETCH TOUTES LES PAGES ─────────────────────────────
+  async function fetchAllRecords() {
+    let page = 1;
+    let all  = [];
+    const perPage = 100;
+
+    while (true) {
+      const url = `${BASE_URL}?page=${page}&perPage=${perPage}`;
+      const res = await fetch(url, {
+        headers: { 'Authorization': `Bearer ${API_KEY}` }
+      });
+      if (!res.ok) throw new Error(`API ${res.status} — ${await res.text()}`);
+      const batch = await res.json();
+      if (!batch.length) break;
+      // Les champs sont dans record.fields
+      all = all.concat(batch);
+      if (batch.length < perPage) break;
+      page++;
+    }
+    return all;
+  }
+
+  async function fetchData() {
+    setStatus('loading', 'Chargement…');
+    clearProgress();
+    try {
+      const records = await fetchAllRecords();
+
+      // Normaliser : les données sont dans record.fields
+      const data = records.map(r => r.fields || r);
+
+      renderBoard(data);
+
+      const now = new Date();
+      document.getElementById('last-update').textContent =
+        now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      document.getElementById('total-count').textContent =
+        data.filter(r => r['Nom de la ferme']).length;
+
+      setStatus('live', 'En direct');
+      startProgress();
+    } catch(e) {
+      setStatus('error', 'Erreur');
+      document.getElementById('board-container').innerHTML = `
+        <div class="state">
+          <div class="icon">⚠️</div>
+          Impossible de charger les données.
+          <div class="error-msg">${e.message}</div>
+        </div>`;
+      console.error(e);
+    }
+  }
+
+  // ── RENDER ─────────────────────────────────────────────
+  function renderBoard(data) {
+    const rows = data.filter(r => r['Nom de la ferme']);
+
+    if (!rows.length) {
+      document.getElementById('board-container').innerHTML =
+        '<div class="state"><div class="icon">📭</div>Aucun arrivage trouvé.</div>';
+      return;
+    }
+
+    const cols = {};
+    rows.forEach(r => {
+      const j = r.Jour || '?';
+      if (!cols[j]) cols[j] = [];
+      cols[j].push(r);
+    });
+
+    const board = document.createElement('div');
+    board.className = 'board';
+
+    Object.keys(cols).sort().forEach(jour => {
+      const col = document.createElement('div');
+      col.className = 'col';
+
+      const header = document.createElement('div');
+      header.className = 'col-header';
+      const dayEl = document.createElement('span');
+      dayEl.className = 'col-day';
+      dayEl.textContent = DAYS[jour] || jour;
+      const countEl = document.createElement('span');
+      countEl.className = 'col-count';
+      countEl.textContent = cols[jour].length;
+      header.appendChild(dayEl);
+      header.appendChild(countEl);
+      col.appendChild(header);
+
+      cols[jour].forEach((item, i) => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.style.animationDelay = (i * 0.04) + 's';
+
+        // Titre + badge transporteur
+        const titleRow = document.createElement('div');
+        titleRow.className = 'card-title-row';
+        const title = document.createElement('div');
+        title.className = 'card-title';
+        title.textContent = item['Nom de la ferme'];
+        titleRow.appendChild(title);
+        if (item.Transporteur) {
+          const badge = document.createElement('span');
+          badge.className = 'badge';
+          badge.textContent = item.Transporteur;
+          titleRow.appendChild(badge);
+        }
+        card.appendChild(titleRow);
+
+        // Heure de collecte
+        const timeEl = document.createElement('div');
+        timeEl.className = 'card-time';
+        if (item.Collecte) {
+          try {
+            const d = new Date(item.Collecte);
+            const h = d.getHours().toString().padStart(2, '0');
+            const m = d.getMinutes().toString().padStart(2, '0');
+            timeEl.textContent = h + 'h' + (m === '00' ? '' : m);
+          } catch { timeEl.textContent = item.Collecte; }
+        } else {
+          timeEl.textContent = '—';
+        }
+        card.appendChild(timeEl);
+
+        // Contenu en bullet points
+        if (item.Contenu) {
+          const ul = document.createElement('ul');
+          ul.className = 'card-items';
+          item.Contenu.split(', ').forEach(it => {
+            const li = document.createElement('li');
+            li.textContent = it.trim();
+            ul.appendChild(li);
+          });
+          card.appendChild(ul);
+        }
+
+        col.appendChild(card);
+      });
+
+      board.appendChild(col);
+    });
+
+    const wrap = document.createElement('div');
+    wrap.className = 'board-wrap';
+    wrap.appendChild(board);
+    document.getElementById('board-container').innerHTML = '';
+    document.getElementById('board-container').appendChild(wrap);
+  }
+
+  // ── UTILS ──────────────────────────────────────────────
+  function setStatus(state, text) {
+    document.getElementById('dot').className = 'dot ' + state;
+    document.getElementById('status-text').textContent = text;
+  }
+
+  function clearProgress() {
+    const bar = document.getElementById('progress');
+    bar.style.transition = 'none';
+    bar.style.transform = 'scaleX(0)';
+  }
+
+  function startProgress() {
+    const bar = document.getElementById('progress');
+    const ms  = intervalMinutes * 60 * 1000;
+    bar.style.transition = 'none';
+    bar.style.transform = 'scaleX(1)';
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      bar.style.transition = `transform ${ms}ms linear`;
+      bar.style.transform = 'scaleX(0)';
+    }));
+  }
+
+  function scheduleNext() {
+    if (timer) clearInterval(timer);
+    timer = setInterval(fetchData, intervalMinutes * 60 * 1000);
+  }
+
+  function changeInterval() {
+    intervalMinutes = parseInt(document.getElementById('interval-select').value);
+    clearProgress();
+    scheduleNext();
+    startProgress();
+  }
+
+  fetchData();
+  scheduleNext();
+</script>
+</body>
+</html>
