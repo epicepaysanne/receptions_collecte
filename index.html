@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Arrivages — Épicerie Paysanne</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:          #f2ede4;
+      --col-bg:      #e8e1d5;
+      --card-bg:     #faf8f4;
+      --border:      #d8d0c2;
+      --text-dark:   #1a1714;
+      --text-mid:    #6b6155;
+      --text-soft:   #9c9082;
+      --badge-bg:    #dbeafe;
+      --badge-txt:   #1e40af;
+      --accent:      #b85c2a;
+      --warn-bg:     #fef3c7;
+      --warn-border: #d97706;
+      --warn-txt:    #92400e;
+      --divider:     #c8bfb0;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 100vh; }
+
+    /* ── HEADER ── */
+    header {
+      background: var(--text-dark);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .header-left h1 { font-family: 'Playfair Display', serif; font-size: 19px; font-weight: 600; color: #f2ede4; }
+    .header-left .subtitle { font-size: 10px; color: #9c9082; margin-top: 2px; letter-spacing: .06em; text-transform: uppercase; }
+    .header-right { display: flex; align-items: center; gap: 12px; }
+    .status { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #9c9082; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: #9c9082; transition: background .3s; flex-shrink: 0; }
+    .dot.live    { background: #4ade80; box-shadow: 0 0 6px #4ade8088; }
+    .dot.loading { background: #facc15; animation: pulse 1s infinite; }
+    .dot.error   { background: #f87171; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    .refresh-btn {
+      background: none; border: 1px solid #3a3530; color: #9c9082;
+      font-family: 'DM Sans', sans-serif; font-size: 11px;
+      padding: 5px 12px; border-radius: 4px; cursor: pointer; transition: all .2s;
+    }
+    .refresh-btn:hover { border-color: #f2ede4; color: #f2ede4; }
+
+    /* ── PROGRESS ── */
+    .progress-wrap { height: 2px; background: #2a2520; overflow: hidden; }
+    .progress-bar  { height: 100%; background: #2d5a27; width: 100%; transform-origin: left; }
+
+    /* ── META BAR ── */
+    .meta-bar {
+      padding: 9px 24px;
+      display: flex; align-items: center; justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+    }
+    .meta-info { font-size: 11px; color: var(--text-soft); }
+    .meta-info strong { color: var(--text-mid); font-weight: 500; }
+    .interval-select {
+      font-family: 'DM Sans', sans-serif; font-size: 11px;
+      background: none; border: 1px solid var(--border);
+      color: var(--text-mid); padding: 4px 8px; border-radius: 4px; cursor: pointer;
+    }
+
+    /* ── SPLIT LAYOUT ── */
+    .split {
+      display: flex;
+      height: calc(100vh - 110px);
+      overflow: hidden;
+    }
+
+    .panel {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .panel-left  { flex: 1; border-right: 2px solid var(--divider); }
+    .panel-right { flex: 0 0 300px; background: #f7f0e2; }
+
+    .panel-header {
+      padding: 10px 16px 8px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .panel-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-dark);
+    }
+    .panel-title.warn { color: var(--warn-border); }
+    .panel-count {
+      font-size: 10px;
+      color: var(--text-soft);
+      background: var(--col-bg);
+      padding: 2px 7px;
+      border-radius: 99px;
+    }
+
+    /* ── BOARD (gauche) ── */
+    .board-scroll { overflow-x: auto; overflow-y: auto; flex: 1; padding: 16px; }
+    .board { display: flex; gap: 10px; align-items: flex-start; min-width: max-content; }
+
+    /* ── LISTE (droite) ── */
+    .list-scroll { overflow-y: auto; flex: 1; padding: 12px; }
+
+    /* ── COLONNES ── */
+    .col { width: 210px; display: flex; flex-direction: column; flex-shrink: 0; }
+    .col-header {
+      padding: 0 2px 8px;
+      border-bottom: 2px solid var(--text-dark);
+      margin-bottom: 8px;
+      display: flex; align-items: baseline; justify-content: space-between;
+    }
+    .col-day   { font-family: 'Playfair Display', serif; font-size: 14px; font-weight: 500; color: var(--text-dark); }
+    .col-count { font-size: 10px; color: var(--text-soft); background: var(--col-bg); padding: 2px 6px; border-radius: 99px; }
+
+    /* ── CARTES ── */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 9px 11px;
+      margin-bottom: 7px;
+      animation: fadeIn .2s ease both;
+    }
+    .card.uncertain {
+      background: var(--warn-bg);
+      border-color: #fcd34d;
+    }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(3px)} to{opacity:1;transform:none} }
+
+    .card-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; margin-bottom: 2px; }
+    .card-title     { font-size: 12px; font-weight: 500; color: var(--text-dark); line-height: 1.35; flex: 1; }
+    .badge          { font-size: 9px; font-weight: 500; background: var(--badge-bg); color: var(--badge-txt); padding: 2px 6px; border-radius: 99px; white-space: nowrap; flex-shrink: 0; }
+    .badge.warn     { background: #fde68a; color: var(--warn-txt); }
+    .card-time      { font-size: 10px; color: var(--text-soft); margin-bottom: 7px; }
+    .card-items     { list-style: none; border-top: 1px solid var(--border); padding-top: 6px; display: flex; flex-direction: column; gap: 3px; }
+    .card-items li  { font-size: 10px; color: var(--text-mid); line-height: 1.45; padding-left: 10px; position: relative; }
+    .card-items li::before { content: "–"; position: absolute; left: 0; color: var(--text-soft); }
+
+    /* ── ÉTATS ── */
+    .empty { padding: 32px 16px; text-align: center; color: var(--text-soft); font-size: 12px; }
+
+    .state       { padding: 60px 28px; text-align: center; color: var(--text-soft); font-size: 13px; line-height: 1.7; }
+    .state .icon { font-size: 32px; margin-bottom: 12px; }
+    .error-msg   { color: var(--accent); font-size: 11px; margin-top: 10px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <h1>Épicerie Paysanne · Arrivages</h1>
+    <div class="subtitle">Planning de collectes semaine</div>
+  </div>
+  <div class="header-right">
+    <div class="status">
+      <div class="dot" id="dot"></div>
+      <span id="status-text">Chargement…</span>
+    </div>
+    <button class="refresh-btn" onclick="fetchData()">↻ Actualiser</button>
+  </div>
+</header>
+
+<div class="progress-wrap"><div class="progress-bar" id="progress"></div></div>
+
+<div class="meta-bar">
+  <div class="meta-info">
+    Mise à jour : <strong id="last-update">—</strong>
+    &nbsp;·&nbsp; <span id="total-count">—</span> collectes confirmées
+  </div>
+  <select class="interval-select" id="interval-select" onchange="changeInterval()">
+    <option value="1">Rafraîchir toutes les 1 min</option>
+    <option value="2">Rafraîchir toutes les 2 min</option>
+    <option value="5" selected>Rafraîchir toutes les 5 min</option>
+    <option value="10">Rafraîchir toutes les 10 min</option>
+    <option value="30">Rafraîchir toutes les 30 min</option>
+  </select>
+</div>
+
+<div id="board-container">
+  <div class="state"><div class="icon">⏳</div>Chargement des arrivages…</div>
+</div>
+
+<script>
+  const TEAM_ID = 't6qSSGdCRhAJHHauW';
+  const DB_ID   = 'agzi4cu61a2b';
+  const API_KEY = '8fa2dedf-d9df-4556-b440-dc45c8a6a382';
+  const BASE    = `https://api.ninox.com/v1/teams/${TEAM_ID}/databases/${DB_ID}`;
+  const JOURS   = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+
+  let intervalMinutes = 5, timer = null;
+
+  // ── FETCH générique (Ferme, petite table) ─────────────
+  async function fetchAll(table) {
+    let page = 1, all = [];
+    while (true) {
+      const res = await fetch(`${BASE}/tables/${table}/records?page=${page}&perPage=100`, {
+        headers: { 'Authorization': `Bearer ${API_KEY}` }
+      });
+      if (!res.ok) throw new Error(`API ${res.status} sur "${table}"`);
+      const batch = await res.json();
+      if (!batch.length) break;
+      all = all.concat(batch);
+      if (batch.length < 100) break;
+      page++;
+    }
+    return all;
+  }
+
+  // ── FETCH Collecte — fenêtre aujourd'hui → +3 mois ───
+  // L'API Ninox ne supporte pas de filtre date en querystring,
+  // on pagine jusqu'à ne plus trouver d'enregistrements futurs.
+  // Pour éviter de tout charger, on s'arrête dès qu'on a
+  // 3 pages consécutives sans aucune collecte future.
+  async function fetchCollectes(dateMin, dateMax) {
+    let page = 1, all = [], emptyStreak = 0;
+    while (true) {
+      const res = await fetch(`${BASE}/tables/Collecte/records?page=${page}&perPage=100`, {
+        headers: { 'Authorization': `Bearer ${API_KEY}` }
+      });
+      if (!res.ok) throw new Error(`API ${res.status} sur "Collecte"`);
+      const batch = await res.json();
+      if (!batch.length) break;
+
+      const inWindow = batch.filter(r => {
+        const d = new Date((r.fields || r).Collecte);
+        return d >= dateMin && d <= dateMax;
+      });
+
+      all = all.concat(inWindow);
+      if (batch.length < 100) break; // dernière page
+
+      // Sécurité : si on dépasse dateMax sur toute la page, on arrête
+      const allAfterMax = batch.every(r => new Date((r.fields || r).Collecte) > dateMax);
+      if (allAfterMax) break;
+
+      emptyStreak = inWindow.length === 0 ? emptyStreak + 1 : 0;
+      if (emptyStreak >= 3) break;
+
+      page++;
+    }
+    return all;
+  }
+
+  async function fetchData() {
+    setStatus('loading', 'Chargement…');
+    clearProgress();
+    try {
+      const now = new Date(); now.setHours(0,0,0,0);
+      const max3m = new Date(now); max3m.setMonth(max3m.getMonth() + 3);
+      const min3m = new Date(now); min3m.setMonth(min3m.getMonth() - 3);
+
+      const [collectes, fermes] = await Promise.all([
+        fetchCollectes(min3m, max3m),
+        fetchAll('Ferme')
+      ]);
+
+      // Map ferme id → { nom, transporteur, incertain }
+      const fermeMap = {};
+      fermes.forEach(p => {
+        const f = p.fields || p;
+        fermeMap[p.id] = {
+          nom:          f['Nom de la ferme'] || `#${p.id}`,
+          transporteur: f['Transporteur'] || f['Transport'] || '',
+          incertain:    !!(f['Jour de livraison incertain ?'])
+        };
+      });
+
+      const now = new Date(); now.setHours(0,0,0,0);
+      const moins3m = new Date(now); moins3m.setMonth(moins3m.getMonth() - 3);
+
+      // Statut "passée" = commande transmise au producteur
+      const passees = collectes
+        .map(r => r.fields || r)
+        .filter(f => String(f.Statut ?? '').toLowerCase().trim() === 'passée' && f.Collecte);
+
+      // Enrichir + séparer certains / incertains
+      const data = passees
+        .map(f => {
+          const prodId = Array.isArray(f.Producteur) ? f.Producteur[0] : f.Producteur;
+          const ferme  = fermeMap[prodId] || { nom: `#${prodId}`, transporteur: '', incertain: false };
+          return {
+            nom:          ferme.nom,
+            transporteur: ferme.transporteur,
+            incertain:    ferme.incertain,
+            collecte:     f.Collecte,
+            contenu:      f.Contenu || f['Détail'] || f['Produits'] || '',
+          };
+        })
+        .filter(item => {
+          const d = new Date(item.collecte);
+          if (item.incertain) return d >= moins3m;   // incertains : 3 derniers mois
+          return d >= now;                            // certains : futur uniquement
+        });
+
+      renderSplit(data);
+
+      const now2 = new Date();
+      document.getElementById('last-update').textContent =
+        now2.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      document.getElementById('total-count').textContent = data.length;
+      setStatus('live', 'En direct');
+      startProgress();
+    } catch(e) {
+      setStatus('error', 'Erreur');
+      document.getElementById('board-container').innerHTML =
+        `<div class="state"><div class="icon">⚠️</div>Erreur de chargement.<div class="error-msg">${e.message}</div></div>`;
+      console.error(e);
+    }
+  }
+
+  // ── RENDER SPLIT ───────────────────────────────────────
+  function renderSplit(data) {
+    const certains   = data.filter(d => !d.incertain);
+    const incertains = data.filter(d => d.incertain);
+
+    const container = document.getElementById('board-container');
+    container.innerHTML = '';
+
+    const split = document.createElement('div');
+    split.className = 'split';
+
+    // ── PANNEAU GAUCHE — kanban par jour ──
+    const left = document.createElement('div');
+    left.className = 'panel panel-left';
+
+    const leftHeader = document.createElement('div');
+    leftHeader.className = 'panel-header';
+    leftHeader.innerHTML = `
+      <span class="panel-title">Collectes planifiées</span>
+      <span class="panel-count">${certains.length}</span>`;
+    left.appendChild(leftHeader);
+
+    const boardScroll = document.createElement('div');
+    boardScroll.className = 'board-scroll';
+
+    if (!certains.length) {
+      boardScroll.innerHTML = '<div class="empty">Aucune collecte planifiée.</div>';
+    } else {
+      const cols = {};
+      certains.forEach(item => {
+        const d   = new Date(item.collecte);
+        const key = d.toISOString().slice(0,10);
+        const lbl = JOURS[d.getDay()] + ' ' +
+          d.getDate().toString().padStart(2,'0') + '/' +
+          (d.getMonth()+1).toString().padStart(2,'0');
+        if (!cols[key]) cols[key] = { lbl, items: [] };
+        cols[key].items.push(item);
+      });
+
+      const board = document.createElement('div');
+      board.className = 'board';
+
+      Object.keys(cols).sort().forEach(key => {
+        const { lbl, items } = cols[key];
+        const col = document.createElement('div');
+        col.className = 'col';
+
+        const h = document.createElement('div');
+        h.className = 'col-header';
+        h.innerHTML = `<span class="col-day">${lbl}</span><span class="col-count">${items.length}</span>`;
+        col.appendChild(h);
+
+        items
+          .sort((a,b) => new Date(a.collecte) - new Date(b.collecte))
+          .forEach((item, i) => col.appendChild(makeCard(item, i, false)));
+
+        board.appendChild(col);
+      });
+      boardScroll.appendChild(board);
+    }
+    left.appendChild(boardScroll);
+
+    // ── PANNEAU DROIT — liste incertains ──
+    const right = document.createElement('div');
+    right.className = 'panel panel-right';
+
+    const rightHeader = document.createElement('div');
+    rightHeader.className = 'panel-header';
+    rightHeader.innerHTML = `
+      <span class="panel-title warn">⚠ Jours incertains</span>
+      <span class="panel-count">${incertains.length}</span>`;
+    right.appendChild(rightHeader);
+
+    const listScroll = document.createElement('div');
+    listScroll.className = 'list-scroll';
+
+    if (!incertains.length) {
+      listScroll.innerHTML = '<div class="empty">Aucune collecte incertaine.</div>';
+    } else {
+      incertains
+        .sort((a,b) => new Date(a.collecte) - new Date(b.collecte))
+        .forEach((item, i) => listScroll.appendChild(makeCard(item, i, true)));
+    }
+    right.appendChild(listScroll);
+
+    split.appendChild(left);
+    split.appendChild(right);
+    container.appendChild(split);
+  }
+
+  // ── CARTE ──────────────────────────────────────────────
+  function makeCard(item, i, uncertain) {
+    const card = document.createElement('div');
+    card.className = 'card' + (uncertain ? ' uncertain' : '');
+    card.style.animationDelay = (i * 0.04) + 's';
+
+    const titleRow = document.createElement('div');
+    titleRow.className = 'card-title-row';
+    const title = document.createElement('div');
+    title.className = 'card-title';
+    title.textContent = item.nom;
+    titleRow.appendChild(title);
+    if (item.transporteur) {
+      const badge = document.createElement('span');
+      badge.className = 'badge' + (uncertain ? ' warn' : '');
+      badge.textContent = item.transporteur;
+      titleRow.appendChild(badge);
+    }
+    card.appendChild(titleRow);
+
+    const timeEl = document.createElement('div');
+    timeEl.className = 'card-time';
+    const d = new Date(item.collecte);
+    const dayLabel = JOURS[d.getDay()] + ' ' +
+      d.getDate().toString().padStart(2,'0') + '/' +
+      (d.getMonth()+1).toString().padStart(2,'0');
+    const h = d.getHours().toString().padStart(2,'0');
+    const m = d.getMinutes().toString().padStart(2,'0');
+    // Dans la colonne droite on affiche aussi le jour
+    timeEl.textContent = uncertain
+      ? dayLabel + ' · ' + h + 'h' + (m==='00'?'':m)
+      : h + 'h' + (m==='00'?'':m);
+    card.appendChild(timeEl);
+
+    if (item.contenu) {
+      const ul = document.createElement('ul');
+      ul.className = 'card-items';
+      item.contenu.split(', ').forEach(it => {
+        const li = document.createElement('li');
+        li.textContent = it.trim();
+        ul.appendChild(li);
+      });
+      card.appendChild(ul);
+    }
+    return card;
+  }
+
+  // ── UTILS ──────────────────────────────────────────────
+  function setStatus(state, text) {
+    document.getElementById('dot').className = 'dot ' + state;
+    document.getElementById('status-text').textContent = text;
+  }
+  function clearProgress() {
+    const bar = document.getElementById('progress');
+    bar.style.transition = 'none';
+    bar.style.transform = 'scaleX(0)';
+  }
+  function startProgress() {
+    const bar = document.getElementById('progress');
+    const ms = intervalMinutes * 60 * 1000;
+    bar.style.transition = 'none';
+    bar.style.transform = 'scaleX(1)';
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      bar.style.transition = `transform ${ms}ms linear`;
+      bar.style.transform = 'scaleX(0)';
+    }));
+  }
+  function scheduleNext() {
+    if (timer) clearInterval(timer);
+    timer = setInterval(fetchData, intervalMinutes * 60 * 1000);
+  }
+  function changeInterval() {
+    intervalMinutes = parseInt(document.getElementById('interval-select').value);
+    clearProgress(); scheduleNext(); startProgress();
+  }
+
+  fetchData();
+  scheduleNext();
+</script>
+</body>
+</html>
