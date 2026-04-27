@@ -172,8 +172,8 @@
   const FILTER_L3M = `Statut=1 and yearweek(Collecte)>=yearweek(today()-90) and Producteur.'Jour de livraison incertain ?'=true`;
 
   // Filtres pour la table Achats (champs préfixés par Collecte.)
-  const FILTER_S0_ACHATS = `Collecte.Statut=1 and date(Collecte.Collecte)>=today() and Collecte.Producteur.'Jour de livraison incertain ?'!=true`;
-  const FILTER_L3M_ACHATS = `Collecte.Statut=1 and yearweek(Collecte.Collecte)>=yearweek(today()-90) and Collecte.Producteur.'Jour de livraison incertain ?'=true`;
+  const FILTER_S0_ACHATS = `'Quantité demandée'>0 and Collecte.Statut=1 and date(Collecte.Collecte)>=today() and Collecte.Producteur.'Jour de livraison incertain ?'!=true`;
+  const FILTER_L3M_ACHATS = `'Quantité demandée'>0 and Collecte.Statut=1 and yearweek(Collecte.Collecte)>=yearweek(today()-90) and Collecte.Producteur.'Jour de livraison incertain ?'=true`;
 
   const JOURS = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
 
@@ -202,7 +202,8 @@
           ferme: Producteur.'Nom de la ferme',
           collecte: Collecte,
           ramasseTransporteur: Ramasse.Transporteur.Nom,
-          ramasseEnlevement: Ramasse.'Enlèvement'
+          ramasseEnlevement: Ramasse.'Enlèvement',
+          ramasseLivraison: Ramasse.Livraison
         }`),
         // Collectes L3M Incertain
         nql(`(select Collecte where ${FILTER_L3M}).{
@@ -210,7 +211,8 @@
           ferme: Producteur.'Nom de la ferme',
           collecte: Collecte,
           ramasseTransporteur: Ramasse.Transporteur.Nom,
-          ramasseEnlevement: Ramasse.'Enlèvement'
+          ramasseEnlevement: Ramasse.'Enlèvement',
+          ramasseLivraison: Ramasse.Livraison
         }`),
         // Achats S0 (libellés par collecte)
         nql(`(select Achats where ${FILTER_S0_ACHATS}).{
@@ -242,9 +244,10 @@
         nom:          c.ferme || '?',
         collecte:     c.collecte,
         contenu:      achatsByCollecte.get(String(c.id)) || [],
-        ramasse:      (c.ramasseTransporteur || c.ramasseEnlevement) ? {
+        ramasse:      (c.ramasseTransporteur || c.ramasseEnlevement || c.ramasseLivraison) ? {
           transporteur: c.ramasseTransporteur || '',
-          enlevement:   c.ramasseEnlevement || null
+          enlevement:   c.ramasseEnlevement || null,
+          livraison:    c.ramasseLivraison || null
         } : null,
         incertain
       });
@@ -388,8 +391,8 @@
     }
     card.appendChild(timeEl);
 
-    // Sous-titre : transporteur + heure de ramasse
-    if (item.ramasse && (item.ramasse.transporteur || item.ramasse.enlevement)) {
+    // Sous-titre : transporteur + heures de ramasse et livraison
+    if (item.ramasse && (item.ramasse.transporteur || item.ramasse.enlevement || item.ramasse.livraison)) {
       const tr = document.createElement('div');
       tr.className = 'transport-info';
       const icon = document.createElement('span');
@@ -402,13 +405,23 @@
         n.textContent = item.ramasse.transporteur;
         tr.appendChild(n);
       }
-      if (item.ramasse.enlevement) {
-        const d = new Date(item.ramasse.enlevement);
+      const fmtHeure = iso => {
+        if (!iso) return null;
+        const d = new Date(iso);
         const h = d.getHours().toString().padStart(2,'0');
         const m = d.getMinutes().toString().padStart(2,'0');
+        return h + 'h' + (m === '00' ? '' : m);
+      };
+      const hEnl = fmtHeure(item.ramasse.enlevement);
+      const hLiv = fmtHeure(item.ramasse.livraison);
+      if (hEnl || hLiv) {
         const t = document.createElement('span');
         t.className = 'time';
-        t.textContent = '· ramasse ' + h + 'h' + (m==='00'?'':m);
+        let txt = '· ';
+        if (hEnl && hLiv) txt += 'ramasse ' + hEnl + ' → livr. ' + hLiv;
+        else if (hEnl)    txt += 'ramasse ' + hEnl;
+        else              txt += 'livr. ' + hLiv;
+        t.textContent = txt;
         tr.appendChild(t);
       }
       card.appendChild(tr);
