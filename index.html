@@ -26,14 +26,10 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'DM Sans', sans-serif; background: var(--bg); min-height: 100vh; }
 
-    /* ── HEADER ── */
     header {
       background: var(--text-dark);
       padding: 16px 24px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
     }
     .header-left h1 { font-family: 'Playfair Display', serif; font-size: 19px; font-weight: 600; color: #f2ede4; }
     .header-left .subtitle { font-size: 10px; color: #9c9082; margin-top: 2px; letter-spacing: .06em; text-transform: uppercase; }
@@ -51,11 +47,9 @@
     }
     .refresh-btn:hover { border-color: #f2ede4; color: #f2ede4; }
 
-    /* ── PROGRESS ── */
     .progress-wrap { height: 2px; background: #2a2520; overflow: hidden; }
     .progress-bar  { height: 100%; background: #2d5a27; width: 100%; transform-origin: left; }
 
-    /* ── META BAR ── */
     .meta-bar {
       padding: 9px 24px;
       display: flex; align-items: center; justify-content: space-between;
@@ -69,76 +63,35 @@
       color: var(--text-mid); padding: 4px 8px; border-radius: 4px; cursor: pointer;
     }
 
-    /* ── SPLIT LAYOUT ── */
-    .split {
-      display: flex;
-      height: calc(100vh - 110px);
-      overflow: hidden;
-    }
-
-    .panel {
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-
+    .split { display: flex; height: calc(100vh - 110px); overflow: hidden; }
+    .panel { display: flex; flex-direction: column; overflow: hidden; }
     .panel-left  { flex: 1; border-right: 2px solid var(--divider); }
     .panel-right { flex: 0 0 300px; background: #f7f0e2; }
-
     .panel-header {
-      padding: 10px 16px 8px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      flex-shrink: 0;
+      padding: 10px 16px 8px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: baseline; justify-content: space-between; flex-shrink: 0;
     }
-    .panel-title {
-      font-family: 'Playfair Display', serif;
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--text-dark);
-    }
+    .panel-title { font-family: 'Playfair Display', serif; font-size: 13px; font-weight: 500; color: var(--text-dark); }
     .panel-title.warn { color: var(--warn-border); }
-    .panel-count {
-      font-size: 10px;
-      color: var(--text-soft);
-      background: var(--col-bg);
-      padding: 2px 7px;
-      border-radius: 99px;
-    }
+    .panel-count { font-size: 10px; color: var(--text-soft); background: var(--col-bg); padding: 2px 7px; border-radius: 99px; }
 
-    /* ── BOARD (gauche) ── */
     .board-scroll { overflow-x: auto; overflow-y: auto; flex: 1; padding: 16px; }
     .board { display: flex; gap: 10px; align-items: flex-start; min-width: max-content; }
-
-    /* ── LISTE (droite) ── */
     .list-scroll { overflow-y: auto; flex: 1; padding: 12px; }
 
-    /* ── COLONNES ── */
     .col { width: 210px; display: flex; flex-direction: column; flex-shrink: 0; }
     .col-header {
-      padding: 0 2px 8px;
-      border-bottom: 2px solid var(--text-dark);
-      margin-bottom: 8px;
-      display: flex; align-items: baseline; justify-content: space-between;
+      padding: 0 2px 8px; border-bottom: 2px solid var(--text-dark);
+      margin-bottom: 8px; display: flex; align-items: baseline; justify-content: space-between;
     }
     .col-day   { font-family: 'Playfair Display', serif; font-size: 14px; font-weight: 500; color: var(--text-dark); }
     .col-count { font-size: 10px; color: var(--text-soft); background: var(--col-bg); padding: 2px 6px; border-radius: 99px; }
 
-    /* ── CARTES ── */
     .card {
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 9px 11px;
-      margin-bottom: 7px;
-      animation: fadeIn .2s ease both;
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: 6px;
+      padding: 9px 11px; margin-bottom: 7px; animation: fadeIn .2s ease both;
     }
-    .card.uncertain {
-      background: var(--warn-bg);
-      border-color: #fcd34d;
-    }
+    .card.uncertain { background: var(--warn-bg); border-color: #fcd34d; }
     @keyframes fadeIn { from{opacity:0;transform:translateY(3px)} to{opacity:1;transform:none} }
 
     .card-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; margin-bottom: 2px; }
@@ -150,12 +103,10 @@
     .card-items li  { font-size: 10px; color: var(--text-mid); line-height: 1.45; padding-left: 10px; position: relative; }
     .card-items li::before { content: "–"; position: absolute; left: 0; color: var(--text-soft); }
 
-    /* ── ÉTATS ── */
     .empty { padding: 32px 16px; text-align: center; color: var(--text-soft); font-size: 12px; }
-
     .state       { padding: 60px 28px; text-align: center; color: var(--text-soft); font-size: 13px; line-height: 1.7; }
     .state .icon { font-size: 32px; margin-bottom: 12px; }
-    .error-msg   { color: var(--accent); font-size: 11px; margin-top: 10px; }
+    .error-msg   { color: var(--accent); font-size: 11px; margin-top: 10px; word-break: break-word; }
   </style>
 </head>
 <body>
@@ -179,7 +130,7 @@
 <div class="meta-bar">
   <div class="meta-info">
     Mise à jour : <strong id="last-update">—</strong>
-    &nbsp;·&nbsp; <span id="total-count">—</span> collectes confirmées
+    &nbsp;·&nbsp; <span id="total-count">—</span> collectes
   </div>
   <select class="interval-select" id="interval-select" onchange="changeInterval()">
     <option value="1">Rafraîchir toutes les 1 min</option>
@@ -195,23 +146,54 @@
 </div>
 
 <script>
+  // ── CONFIG ─────────────────────────────────────────────
   const TEAM_ID = 't6qSSGdCRhAJHHauW';
   const DB_ID   = 'agzi4cu61a2b';
   const API_KEY = '8fa2dedf-d9df-4556-b440-dc45c8a6a382';
   const BASE    = `https://api.ninox.com/v1/teams/${TEAM_ID}/databases/${DB_ID}`;
+  const HEADERS = { 'Authorization': `Bearer ${API_KEY}`, 'Content-Type': 'application/json' };
   const JOURS   = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+
+  // Requêtes NQL fournies par Bertrand
+  const QUERY_CERTAINS = `select Collecte where Statut=1 and date(Collecte)>=today() and Producteur.'Jour de livraison incertain ?'!=true`;
+  const QUERY_INCERTAINS = `select Collecte where Statut=1 and yearweek(Collecte)>=yearweek(today()-90) and Producteur.'Jour de livraison incertain ?'=true`;
 
   let intervalMinutes = 5, timer = null;
 
-  // ── FETCH générique (Ferme, petite table) ─────────────
-  async function fetchAll(table) {
+  // ── 1. Récupérer les IDs via NQL ───────────────────────
+  async function fetchIds(query) {
+    const r = await fetch(`${BASE}/query`, {
+      method: 'POST',
+      headers: HEADERS,
+      body: JSON.stringify({ query: `let x := ${query}; x` })
+    });
+    if (!r.ok) throw new Error(`Query ${r.status}: ${await r.text()}`);
+    const ids = await r.json();
+    if (!Array.isArray(ids)) throw new Error('Réponse query invalide');
+    // Format: ["B36072", "B12345"...] → on garde tel quel, ils servent d'identifiants
+    return ids;
+  }
+
+  // ── 2. Récupérer un record par ID ──────────────────────
+  async function fetchRecord(id) {
+    // L'ID renvoyé est sous la forme "B12345" — le numéro après B est le record id
+    const numId = id.toString().replace(/^B/, '');
+    const r = await fetch(`${BASE}/tables/Collecte/records/${numId}`, {
+      headers: { 'Authorization': `Bearer ${API_KEY}` }
+    });
+    if (!r.ok) throw new Error(`Record ${numId}: ${r.status}`);
+    return r.json();
+  }
+
+  // ── 3. Récupérer toutes les fermes (table petite) ─────
+  async function fetchFermes() {
     let page = 1, all = [];
     while (true) {
-      const res = await fetch(`${BASE}/tables/${table}/records?page=${page}&perPage=100`, {
+      const r = await fetch(`${BASE}/tables/Ferme/records?page=${page}&perPage=100`, {
         headers: { 'Authorization': `Bearer ${API_KEY}` }
       });
-      if (!res.ok) throw new Error(`API ${res.status} sur "${table}"`);
-      const batch = await res.json();
+      if (!r.ok) throw new Error(`Fermes ${r.status}`);
+      const batch = await r.json();
       if (!batch.length) break;
       all = all.concat(batch);
       if (batch.length < 100) break;
@@ -220,97 +202,53 @@
     return all;
   }
 
-  // ── FETCH Collecte — fenêtre aujourd'hui → +3 mois ───
-  // L'API Ninox ne supporte pas de filtre date en querystring,
-  // on pagine jusqu'à ne plus trouver d'enregistrements futurs.
-  // Pour éviter de tout charger, on s'arrête dès qu'on a
-  // 3 pages consécutives sans aucune collecte future.
-  async function fetchCollectes(dateMin, dateMax) {
-    let page = 1, all = [], emptyStreak = 0;
-    while (true) {
-      const res = await fetch(`${BASE}/tables/Collecte/records?page=${page}&perPage=100`, {
-        headers: { 'Authorization': `Bearer ${API_KEY}` }
-      });
-      if (!res.ok) throw new Error(`API ${res.status} sur "Collecte"`);
-      const batch = await res.json();
-      if (!batch.length) break;
-
-      const inWindow = batch.filter(r => {
-        const d = new Date((r.fields || r).Collecte);
-        return d >= dateMin && d <= dateMax;
-      });
-
-      all = all.concat(inWindow);
-      if (batch.length < 100) break; // dernière page
-
-      // Sécurité : si on dépasse dateMax sur toute la page, on arrête
-      const allAfterMax = batch.every(r => new Date((r.fields || r).Collecte) > dateMax);
-      if (allAfterMax) break;
-
-      emptyStreak = inWindow.length === 0 ? emptyStreak + 1 : 0;
-      if (emptyStreak >= 3) break;
-
-      page++;
-    }
-    return all;
-  }
-
+  // ── ORCHESTRATION ──────────────────────────────────────
   async function fetchData() {
     setStatus('loading', 'Chargement…');
     clearProgress();
     try {
-      const now = new Date(); now.setHours(0,0,0,0);
-      const max3m = new Date(now); max3m.setMonth(max3m.getMonth() + 3);
-      const min3m = new Date(now); min3m.setMonth(min3m.getMonth() - 3);
-
-      const [collectes, fermes] = await Promise.all([
-        fetchCollectes(min3m, max3m),
-        fetchAll('Ferme')
+      // 1. Récupérer les deux listes d'IDs en parallèle + les fermes
+      const [idsCertains, idsIncertains, fermes] = await Promise.all([
+        fetchIds(QUERY_CERTAINS),
+        fetchIds(QUERY_INCERTAINS),
+        fetchFermes()
       ]);
 
-      // Map ferme id → { nom, transporteur, incertain }
+      // 2. Map ferme id → infos
       const fermeMap = {};
       fermes.forEach(p => {
         const f = p.fields || p;
         fermeMap[p.id] = {
           nom:          f['Nom de la ferme'] || `#${p.id}`,
-          transporteur: f['Transporteur'] || f['Transport'] || '',
-          incertain:    !!(f['Jour de livraison incertain ?'])
+          transporteur: f['Transporteur'] || f['Transport'] || ''
         };
       });
 
-      const now = new Date(); now.setHours(0,0,0,0);
-      const moins3m = new Date(now); moins3m.setMonth(moins3m.getMonth() - 3);
+      // 3. Fetch des records en parallèle (toutes les collectes nécessaires)
+      const allIds = [...idsCertains, ...idsIncertains];
+      const records = await Promise.all(allIds.map(id => fetchRecord(id).catch(() => null)));
 
-      // Statut "passée" = commande transmise au producteur
-      const passees = collectes
-        .map(r => r.fields || r)
-        .filter(f => String(f.Statut ?? '').toLowerCase().trim() === 'passée' && f.Collecte);
-
-      // Enrichir + séparer certains / incertains
-      const data = passees
-        .map(f => {
-          const prodId = Array.isArray(f.Producteur) ? f.Producteur[0] : f.Producteur;
-          const ferme  = fermeMap[prodId] || { nom: `#${prodId}`, transporteur: '', incertain: false };
-          return {
-            nom:          ferme.nom,
-            transporteur: ferme.transporteur,
-            incertain:    ferme.incertain,
-            collecte:     f.Collecte,
-            contenu:      f.Contenu || f['Détail'] || f['Produits'] || '',
-          };
-        })
-        .filter(item => {
-          const d = new Date(item.collecte);
-          if (item.incertain) return d >= moins3m;   // incertains : 3 derniers mois
-          return d >= now;                            // certains : futur uniquement
-        });
+      // 4. Mapper les records en data
+      const idSetIncertains = new Set(idsIncertains.map(String));
+      const data = records.filter(Boolean).map(rec => {
+        const f = rec.fields || {};
+        const prodId = Array.isArray(f.Producteur) ? f.Producteur[0] : f.Producteur;
+        const ferme  = fermeMap[prodId] || { nom: `#${prodId}`, transporteur: '' };
+        return {
+          id:           String(rec.id),
+          nom:          ferme.nom,
+          transporteur: ferme.transporteur,
+          incertain:    idSetIncertains.has('B' + rec.id) || idSetIncertains.has(String(rec.id)),
+          collecte:     f.Collecte,
+          contenu:      f.Contenu || f['Détail'] || f['Produits'] || ''
+        };
+      });
 
       renderSplit(data);
 
-      const now2 = new Date();
+      const now = new Date();
       document.getElementById('last-update').textContent =
-        now2.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
       document.getElementById('total-count').textContent = data.length;
       setStatus('live', 'En direct');
       startProgress();
@@ -325,7 +263,7 @@
   // ── RENDER SPLIT ───────────────────────────────────────
   function renderSplit(data) {
     const certains   = data.filter(d => !d.incertain);
-    const incertains = data.filter(d => d.incertain);
+    const incertains = data.filter(d =>  d.incertain);
 
     const container = document.getElementById('board-container');
     container.innerHTML = '';
@@ -333,10 +271,9 @@
     const split = document.createElement('div');
     split.className = 'split';
 
-    // ── PANNEAU GAUCHE — kanban par jour ──
+    // ── PANNEAU GAUCHE ──
     const left = document.createElement('div');
     left.className = 'panel panel-left';
-
     const leftHeader = document.createElement('div');
     leftHeader.className = 'panel-header';
     leftHeader.innerHTML = `
@@ -368,26 +305,22 @@
         const { lbl, items } = cols[key];
         const col = document.createElement('div');
         col.className = 'col';
-
         const h = document.createElement('div');
         h.className = 'col-header';
         h.innerHTML = `<span class="col-day">${lbl}</span><span class="col-count">${items.length}</span>`;
         col.appendChild(h);
-
         items
           .sort((a,b) => new Date(a.collecte) - new Date(b.collecte))
           .forEach((item, i) => col.appendChild(makeCard(item, i, false)));
-
         board.appendChild(col);
       });
       boardScroll.appendChild(board);
     }
     left.appendChild(boardScroll);
 
-    // ── PANNEAU DROIT — liste incertains ──
+    // ── PANNEAU DROIT ──
     const right = document.createElement('div');
     right.className = 'panel panel-right';
-
     const rightHeader = document.createElement('div');
     rightHeader.className = 'panel-header';
     rightHeader.innerHTML = `
@@ -402,7 +335,7 @@
       listScroll.innerHTML = '<div class="empty">Aucune collecte incertaine.</div>';
     } else {
       incertains
-        .sort((a,b) => new Date(a.collecte) - new Date(b.collecte))
+        .sort((a,b) => new Date(b.collecte) - new Date(a.collecte))  // plus récent en haut
         .forEach((item, i) => listScroll.appendChild(makeCard(item, i, true)));
     }
     right.appendChild(listScroll);
@@ -434,16 +367,19 @@
 
     const timeEl = document.createElement('div');
     timeEl.className = 'card-time';
-    const d = new Date(item.collecte);
-    const dayLabel = JOURS[d.getDay()] + ' ' +
-      d.getDate().toString().padStart(2,'0') + '/' +
-      (d.getMonth()+1).toString().padStart(2,'0');
-    const h = d.getHours().toString().padStart(2,'0');
-    const m = d.getMinutes().toString().padStart(2,'0');
-    // Dans la colonne droite on affiche aussi le jour
-    timeEl.textContent = uncertain
-      ? dayLabel + ' · ' + h + 'h' + (m==='00'?'':m)
-      : h + 'h' + (m==='00'?'':m);
+    if (item.collecte) {
+      const d = new Date(item.collecte);
+      const dayLabel = JOURS[d.getDay()] + ' ' +
+        d.getDate().toString().padStart(2,'0') + '/' +
+        (d.getMonth()+1).toString().padStart(2,'0');
+      const h = d.getHours().toString().padStart(2,'0');
+      const m = d.getMinutes().toString().padStart(2,'0');
+      timeEl.textContent = uncertain
+        ? dayLabel + ' · ' + h + 'h' + (m==='00'?'':m)
+        : h + 'h' + (m==='00'?'':m);
+    } else {
+      timeEl.textContent = '—';
+    }
     card.appendChild(timeEl);
 
     if (item.contenu) {
