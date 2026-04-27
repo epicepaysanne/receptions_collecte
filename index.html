@@ -63,29 +63,43 @@
       color: var(--text-mid); padding: 4px 8px; border-radius: 4px; cursor: pointer;
     }
 
-    .split { display: flex; height: calc(100vh - 110px); overflow: hidden; }
-    .panel { display: flex; flex-direction: column; overflow: hidden; }
-    .panel-left  { flex: 1; border-right: 2px solid var(--divider); }
-    .panel-right { flex: 0 0 320px; background: #f7f0e2; }
-    .panel-header {
-      padding: 10px 16px 8px; border-bottom: 1px solid var(--border);
-      display: flex; align-items: baseline; justify-content: space-between; flex-shrink: 0;
+    /* ── LAYOUT GRID UNIFIÉ ── */
+    .grid-board {
+      display: grid;
+      grid-template-columns: repeat(var(--n-cols, 5), 1fr);
+      gap: 0;
+      height: calc(100vh - 110px);
+      overflow: hidden;
     }
-    .panel-title { font-family: 'Playfair Display', serif; font-size: 13px; font-weight: 500; color: var(--text-dark); }
-    .panel-title.warn { color: var(--warn-border); }
-    .panel-count { font-size: 10px; color: var(--text-soft); background: var(--col-bg); padding: 2px 7px; border-radius: 99px; }
-
-    .board-scroll { overflow-x: auto; overflow-y: auto; flex: 1; padding: 16px; }
-    .board { display: flex; gap: 10px; align-items: flex-start; min-width: max-content; }
-    .list-scroll { overflow-y: auto; flex: 1; padding: 12px; }
-
-    .col { width: 230px; display: flex; flex-direction: column; flex-shrink: 0; }
-    .col-header {
-      padding: 0 2px 8px; border-bottom: 2px solid var(--text-dark);
-      margin-bottom: 8px; display: flex; align-items: baseline; justify-content: space-between;
+    .gcol {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border-right: 1px solid var(--border);
+      min-width: 0;
     }
-    .col-day   { font-family: 'Playfair Display', serif; font-size: 14px; font-weight: 500; color: var(--text-dark); }
-    .col-count { font-size: 10px; color: var(--text-soft); background: var(--col-bg); padding: 2px 6px; border-radius: 99px; }
+    .gcol:last-child { border-right: none; }
+    .gcol.uncertain { background: #f7f0e2; }
+    .gcol.uncertain + .gcol.uncertain { border-left: 1px dashed var(--warn-border); }
+
+    .gcol-header {
+      padding: 10px 12px 8px;
+      border-bottom: 2px solid var(--text-dark);
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    .gcol.uncertain .gcol-header { border-bottom-color: var(--warn-border); }
+
+    .gcol-day   { font-family: 'Playfair Display', serif; font-size: 14px; font-weight: 500; color: var(--text-dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .gcol.uncertain .gcol-day { color: var(--warn-txt); }
+    .gcol-day .warn-icon { color: var(--warn-border); margin-right: 3px; }
+    .gcol-count { font-size: 10px; color: var(--text-soft); background: var(--col-bg); padding: 2px 6px; border-radius: 99px; flex-shrink: 0; }
+    .gcol.uncertain .gcol-count { background: #f5e6c4; color: var(--warn-txt); }
+
+    .gcol-scroll { overflow-y: auto; overflow-x: hidden; flex: 1; padding: 10px 8px; }
 
     .card {
       background: var(--card-bg); border: 1px solid var(--border); border-radius: 6px;
@@ -257,7 +271,7 @@
         ...collectesL3M.map(c => buildItem(c, true))
       ];
 
-      renderSplit(data);
+      renderBoard(data);
 
       const now = new Date();
       document.getElementById('last-update').textContent =
@@ -273,89 +287,109 @@
     }
   }
 
-  // ── RENDER SPLIT ──────────────────────────────────────
-  function renderSplit(data) {
+  // ── RENDER BOARD UNIFIÉ ────────────────────────────────
+  function renderBoard(data) {
     const certains   = data.filter(d => !d.incertain);
     const incertains = data.filter(d =>  d.incertain);
 
+    // ── Calculer les jours restants de la semaine (lun→dim) à partir d'aujourd'hui
+    const today = new Date(); today.setHours(0,0,0,0);
+    const dow = today.getDay(); // 0=dim, 1=lun…
+    // Combien de jours jusqu'à dimanche inclus (1=dim → 0 ; 1=lun → 6)
+    const daysLeftInWeek = (dow === 0) ? 0 : 7 - dow;
+    // Date de fin de semaine (dimanche soir 23:59)
+    const endOfWeek = new Date(today);
+    endOfWeek.setDate(today.getDate() + daysLeftInWeek);
+    endOfWeek.setHours(23,59,59,999);
+
+    // ── Grouper certains par jour
+    const dayCols = new Map(); // key (YYYY-MM-DD) → {label, items, isThisWeek}
+    // Initialiser une colonne pour chaque jour de la semaine en cours (aujourd'hui inclus)
+    for (let i = 0; i <= daysLeftInWeek; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() + i);
+      const key = d.toISOString().slice(0,10);
+      const label = JOURS[d.getDay()] + ' ' +
+        d.getDate().toString().padStart(2,'0') + '/' +
+        (d.getMonth()+1).toString().padStart(2,'0');
+      dayCols.set(key, { label, items: [], future: false });
+    }
+    // Ajouter les certains dans leur colonne (créer colonne future si > fin de semaine)
+    certains.forEach(item => {
+      const d = new Date(item.collecte);
+      const key = d.toISOString().slice(0,10);
+      if (!dayCols.has(key)) {
+        const label = JOURS[d.getDay()] + ' ' +
+          d.getDate().toString().padStart(2,'0') + '/' +
+          (d.getMonth()+1).toString().padStart(2,'0');
+        dayCols.set(key, { label, items: [], future: true });
+      }
+      dayCols.get(key).items.push(item);
+    });
+
+    // ── Séparer les incertains
+    const incertSemaine = [];
+    const incertAutres = [];
+    incertains.forEach(item => {
+      const d = new Date(item.collecte);
+      if (d >= today && d <= endOfWeek) incertSemaine.push(item);
+      else incertAutres.push(item);
+    });
+
+    // ── Construire la liste finale des colonnes
+    const allCols = [];
+    [...dayCols.entries()].sort((a,b) => a[0].localeCompare(b[0])).forEach(([key, col]) => {
+      allCols.push({
+        type: 'day',
+        label: col.label,
+        items: col.items.sort((a,b) => new Date(a.collecte) - new Date(b.collecte)),
+        uncertain: false
+      });
+    });
+    allCols.push({
+      type: 'uncert-week',
+      label: '⚠ Incertains · cette semaine',
+      items: incertSemaine.sort((a,b) => new Date(a.collecte) - new Date(b.collecte)),
+      uncertain: true
+    });
+    allCols.push({
+      type: 'uncert-other',
+      label: '⚠ Incertains · autres',
+      items: incertAutres.sort((a,b) => new Date(b.collecte) - new Date(a.collecte)),
+      uncertain: true
+    });
+
+    // ── RENDER
     const container = document.getElementById('board-container');
     container.innerHTML = '';
 
-    const split = document.createElement('div');
-    split.className = 'split';
+    const grid = document.createElement('div');
+    grid.className = 'grid-board';
+    grid.style.setProperty('--n-cols', allCols.length);
 
-    // ── PANNEAU GAUCHE ──
-    const left = document.createElement('div');
-    left.className = 'panel panel-left';
-    const leftHeader = document.createElement('div');
-    leftHeader.className = 'panel-header';
-    leftHeader.innerHTML = `
-      <span class="panel-title">Collectes planifiées</span>
-      <span class="panel-count">${certains.length}</span>`;
-    left.appendChild(leftHeader);
+    allCols.forEach(col => {
+      const c = document.createElement('div');
+      c.className = 'gcol' + (col.uncertain ? ' uncertain' : '');
 
-    const boardScroll = document.createElement('div');
-    boardScroll.className = 'board-scroll';
+      const h = document.createElement('div');
+      h.className = 'gcol-header';
+      h.innerHTML = `<span class="gcol-day">${col.label}</span><span class="gcol-count">${col.items.length}</span>`;
+      c.appendChild(h);
 
-    if (!certains.length) {
-      boardScroll.innerHTML = '<div class="empty">Aucune collecte planifiée.</div>';
-    } else {
-      const cols = {};
-      certains.forEach(item => {
-        const d   = new Date(item.collecte);
-        const key = d.toISOString().slice(0,10);
-        const lbl = JOURS[d.getDay()] + ' ' +
-          d.getDate().toString().padStart(2,'0') + '/' +
-          (d.getMonth()+1).toString().padStart(2,'0');
-        if (!cols[key]) cols[key] = { lbl, items: [] };
-        cols[key].items.push(item);
-      });
+      const scroll = document.createElement('div');
+      scroll.className = 'gcol-scroll';
 
-      const board = document.createElement('div');
-      board.className = 'board';
+      if (!col.items.length) {
+        scroll.innerHTML = '<div class="empty">—</div>';
+      } else {
+        col.items.forEach((item, i) => scroll.appendChild(makeCard(item, i, col.uncertain)));
+      }
 
-      Object.keys(cols).sort().forEach(key => {
-        const { lbl, items } = cols[key];
-        const col = document.createElement('div');
-        col.className = 'col';
-        const h = document.createElement('div');
-        h.className = 'col-header';
-        h.innerHTML = `<span class="col-day">${lbl}</span><span class="col-count">${items.length}</span>`;
-        col.appendChild(h);
-        items
-          .sort((a,b) => new Date(a.collecte) - new Date(b.collecte))
-          .forEach((item, i) => col.appendChild(makeCard(item, i, false)));
-        board.appendChild(col);
-      });
-      boardScroll.appendChild(board);
-    }
-    left.appendChild(boardScroll);
+      c.appendChild(scroll);
+      grid.appendChild(c);
+    });
 
-    // ── PANNEAU DROIT ──
-    const right = document.createElement('div');
-    right.className = 'panel panel-right';
-    const rightHeader = document.createElement('div');
-    rightHeader.className = 'panel-header';
-    rightHeader.innerHTML = `
-      <span class="panel-title warn">⚠ Jours incertains</span>
-      <span class="panel-count">${incertains.length}</span>`;
-    right.appendChild(rightHeader);
-
-    const listScroll = document.createElement('div');
-    listScroll.className = 'list-scroll';
-
-    if (!incertains.length) {
-      listScroll.innerHTML = '<div class="empty">Aucune collecte incertaine.</div>';
-    } else {
-      incertains
-        .sort((a,b) => new Date(b.collecte) - new Date(a.collecte))
-        .forEach((item, i) => listScroll.appendChild(makeCard(item, i, true)));
-    }
-    right.appendChild(listScroll);
-
-    split.appendChild(left);
-    split.appendChild(right);
-    container.appendChild(split);
+    container.appendChild(grid);
   }
 
   // ── CARTE ─────────────────────────────────────────────
@@ -412,14 +446,26 @@
         const m = d.getMinutes().toString().padStart(2,'0');
         return h + 'h' + (m === '00' ? '' : m);
       };
+      // Détecter si la ramasse a lieu la veille de la collecte
+      const dayDiff = (iso1, iso2) => {
+        if (!iso1 || !iso2) return 0;
+        const d1 = new Date(iso1); d1.setHours(0,0,0,0);
+        const d2 = new Date(iso2); d2.setHours(0,0,0,0);
+        return Math.round((d2 - d1) / 86400000);
+      };
       const hEnl = fmtHeure(item.ramasse.enlevement);
       const hLiv = fmtHeure(item.ramasse.livraison);
+      // Préfixe pour ramasse la veille
+      const enlVeille = item.ramasse.enlevement && item.collecte
+        ? dayDiff(item.ramasse.enlevement, item.collecte) === 1 : false;
+      const enlLabel = enlVeille ? 'la veille ' + hEnl : hEnl;
+
       if (hEnl || hLiv) {
         const t = document.createElement('span');
         t.className = 'time';
         let txt = '· ';
-        if (hEnl && hLiv) txt += 'ramasse ' + hEnl + ' → livr. ' + hLiv;
-        else if (hEnl)    txt += 'ramasse ' + hEnl;
+        if (hEnl && hLiv) txt += 'ramasse ' + enlLabel + ' → livr. ' + hLiv;
+        else if (hEnl)    txt += 'ramasse ' + enlLabel;
         else              txt += 'livr. ' + hLiv;
         t.textContent = txt;
         tr.appendChild(t);
