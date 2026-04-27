@@ -167,10 +167,13 @@
   const BASE    = `https://api.ninox.com/v1/teams/${TEAM_ID}/databases/${DB_ID}`;
   const HEADERS = { 'Authorization': `Bearer ${API_KEY}`, 'Content-Type': 'application/json' };
 
-  // Filtre commun S0 (jours certains, futurs)
+  // Filtres pour la table Collecte (depuis Collecte directement)
   const FILTER_S0 = `Statut=1 and date(Collecte)>=today() and Producteur.'Jour de livraison incertain ?'!=true`;
-  // Filtre commun L3M (jours incertains, 90 derniers jours et au-delà)
   const FILTER_L3M = `Statut=1 and yearweek(Collecte)>=yearweek(today()-90) and Producteur.'Jour de livraison incertain ?'=true`;
+
+  // Filtres pour la table Achats (champs préfixés par Collecte.)
+  const FILTER_S0_ACHATS = `Collecte.Statut=1 and date(Collecte.Collecte)>=today() and Collecte.Producteur.'Jour de livraison incertain ?'!=true`;
+  const FILTER_L3M_ACHATS = `Collecte.Statut=1 and yearweek(Collecte.Collecte)>=yearweek(today()-90) and Collecte.Producteur.'Jour de livraison incertain ?'=true`;
 
   const JOURS = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
 
@@ -210,12 +213,12 @@
           ramasseEnlevement: Ramasse.'Enlèvement'
         }`),
         // Achats S0 (libellés par collecte)
-        nql(`(select Achats where Collecte.${FILTER_S0}).{
+        nql(`(select Achats where ${FILTER_S0_ACHATS}).{
           collecteId: number(Collecte),
           lib: 'libellé facturé'
         }`),
         // Achats L3M
-        nql(`(select Achats where Collecte.${FILTER_L3M}).{
+        nql(`(select Achats where ${FILTER_L3M_ACHATS}).{
           collecteId: number(Collecte),
           lib: 'libellé facturé'
         }`)
