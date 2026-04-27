@@ -194,7 +194,7 @@
       // Une seule rafale de requêtes NQL — tout en parallèle
       const [collectesS0, collectesL3M, achatsS0, achatsL3M] = await Promise.all([
         // Collectes S0 avec toutes les infos
-        nql(`let x := select Collecte where ${FILTER_S0}; x.{
+        nql(`(select Collecte where ${FILTER_S0}).{
           id: number(this),
           ferme: Producteur.'Nom de la ferme',
           collecte: Collecte,
@@ -202,7 +202,7 @@
           ramasseEnlevement: Ramasse.'Enlèvement'
         }`),
         // Collectes L3M Incertain
-        nql(`let x := select Collecte where ${FILTER_L3M}; x.{
+        nql(`(select Collecte where ${FILTER_L3M}).{
           id: number(this),
           ferme: Producteur.'Nom de la ferme',
           collecte: Collecte,
@@ -210,12 +210,12 @@
           ramasseEnlevement: Ramasse.'Enlèvement'
         }`),
         // Achats S0 (libellés par collecte)
-        nql(`let x := select Achats where Collecte.${FILTER_S0}; x.{
+        nql(`(select Achats where Collecte.${FILTER_S0}).{
           collecteId: number(Collecte),
           lib: 'libellé facturé'
         }`),
         // Achats L3M
-        nql(`let x := select Achats where Collecte.${FILTER_L3M}; x.{
+        nql(`(select Achats where Collecte.${FILTER_L3M}).{
           collecteId: number(Collecte),
           lib: 'libellé facturé'
         }`)
