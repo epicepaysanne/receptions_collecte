@@ -221,14 +221,17 @@
         }`)
       ]);
 
-      // Index achats par collecteId
+      // Index achats par collecteId (clés en string pour cohérence)
       const achatsByCollecte = new Map();
       [...achatsS0, ...achatsL3M].forEach(a => {
-        if (!a.collecteId) return;
+        if (a.collecteId == null) return;
         const k = String(a.collecteId);
         if (!achatsByCollecte.has(k)) achatsByCollecte.set(k, []);
         if (a.lib) achatsByCollecte.get(k).push(a.lib);
       });
+
+      console.log('[DEBUG] Collectes S0:', collectesS0.length, 'IDs:', collectesS0.slice(0,3).map(c => c.id));
+      console.log('[DEBUG] Achats indexés:', achatsByCollecte.size, 'clés:', [...achatsByCollecte.keys()].slice(0,3));
 
       // Composer les données finales
       const buildItem = (c, incertain) => ({
