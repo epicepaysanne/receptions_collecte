@@ -15,8 +15,6 @@
       --text-dark:   #1a1714;
       --text-mid:    #6b6155;
       --text-soft:   #9c9082;
-      --badge-bg:    #dbeafe;
-      --badge-txt:   #1e40af;
       --accent:      #b85c2a;
       --warn-bg:     #fef3c7;
       --warn-border: #d97706;
@@ -163,180 +161,92 @@
 </div>
 
 <script>
-  // ── CONFIG ─────────────────────────────────────────────
   const TEAM_ID = 't6qSSGdCRhAJHHauW';
   const DB_ID   = 'agzi4cu61a2b';
   const API_KEY = '8fa2dedf-d9df-4556-b440-dc45c8a6a382';
   const BASE    = `https://api.ninox.com/v1/teams/${TEAM_ID}/databases/${DB_ID}`;
-  const AUTH    = { 'Authorization': `Bearer ${API_KEY}` };
-  const HEADERS_JSON = { ...AUTH, 'Content-Type': 'application/json' };
+  const HEADERS = { 'Authorization': `Bearer ${API_KEY}`, 'Content-Type': 'application/json' };
 
-  const TABLE_COLLECTE   = 'Collecte';
-  const TABLE_FERME      = 'Ferme';
-  const TABLE_ACHATS     = 'Achats';
-  const TABLE_RAMASSE    = 'Ramasse';
-  const TABLE_TRANSPORT  = 'UC';
-
-  const QUERY_CERTAINS   = `select Collecte where Statut=1 and date(Collecte)>=today() and Producteur.'Jour de livraison incertain ?'!=true`;
-  const QUERY_INCERTAINS = `select Collecte where Statut=1 and yearweek(Collecte)>=yearweek(today()-90) and Producteur.'Jour de livraison incertain ?'=true`;
+  // Filtre commun S0 (jours certains, futurs)
+  const FILTER_S0 = `Statut=1 and date(Collecte)>=today() and Producteur.'Jour de livraison incertain ?'!=true`;
+  // Filtre commun L3M (jours incertains, 90 derniers jours et au-delà)
+  const FILTER_L3M = `Statut=1 and yearweek(Collecte)>=yearweek(today()-90) and Producteur.'Jour de livraison incertain ?'=true`;
 
   const JOURS = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
 
   let intervalMinutes = 5, timer = null;
 
-  // ── HELPERS ────────────────────────────────────────────
-  function cleanId(id) {
-    // "B36072" → "36072", ou nombre → string
-    return String(id).replace(/^B/, '');
-  }
-
-  async function nqlQuery(query) {
+  // ── REQUÊTE NQL UNIQUE ────────────────────────────────
+  async function nql(query) {
     const r = await fetch(`${BASE}/query`, {
-      method: 'POST',
-      headers: HEADERS_JSON,
-      body: JSON.stringify({ query: `let x := ${query}; x` })
+      method: 'POST', headers: HEADERS,
+      body: JSON.stringify({ query })
     });
-    if (!r.ok) throw new Error(`NQL ${r.status}`);
-    const d = await r.json();
-    if (!Array.isArray(d)) return [];
-    return d;
-  }
-
-  async function fetchRecord(table, id) {
-    const r = await fetch(`${BASE}/tables/${table}/records/${cleanId(id)}`, { headers: AUTH });
-    if (!r.ok) return null;
+    if (!r.ok) throw new Error(`NQL ${r.status}: ${await r.text()}`);
     return r.json();
   }
 
-  async function fetchAllRecords(table) {
-    let page = 1, all = [];
-    while (true) {
-      const r = await fetch(`${BASE}/tables/${table}/records?page=${page}&perPage=100`, { headers: AUTH });
-      if (!r.ok) throw new Error(`${table} ${r.status}`);
-      const batch = await r.json();
-      if (!batch.length) break;
-      all = all.concat(batch);
-      if (batch.length < 100) break;
-      page++;
-    }
-    return all;
-  }
-
-  // Fetch parallèle avec limite de concurrence pour ne pas saturer l'API
-  async function batchFetch(table, ids, concurrency = 8) {
-    const results = new Map();
-    let cursor = 0;
-    async function worker() {
-      while (cursor < ids.length) {
-        const i = cursor++;
-        const id = ids[i];
-        const rec = await fetchRecord(table, id);
-        if (rec) results.set(String(rec.id), rec);
-      }
-    }
-    await Promise.all(Array(concurrency).fill(0).map(worker));
-    return results;
-  }
-
-  // ── ORCHESTRATION ──────────────────────────────────────
+  // ── ORCHESTRATION ─────────────────────────────────────
   async function fetchData() {
     setStatus('loading', 'Chargement…');
     clearProgress();
     try {
-      // 1. NQL → IDs des collectes pertinentes
-      const [idsCertains, idsIncertains] = await Promise.all([
-        nqlQuery(QUERY_CERTAINS),
-        nqlQuery(QUERY_INCERTAINS)
+      // Une seule rafale de requêtes NQL — tout en parallèle
+      const [collectesS0, collectesL3M, achatsS0, achatsL3M] = await Promise.all([
+        // Collectes S0 avec toutes les infos
+        nql(`let x := select Collecte where ${FILTER_S0}; x.{
+          id: number(this),
+          ferme: Producteur.'Nom de la ferme',
+          collecte: Collecte,
+          ramasseTransporteur: Ramasse.Transporteur.Nom,
+          ramasseEnlevement: Ramasse.'Enlèvement'
+        }`),
+        // Collectes L3M Incertain
+        nql(`let x := select Collecte where ${FILTER_L3M}; x.{
+          id: number(this),
+          ferme: Producteur.'Nom de la ferme',
+          collecte: Collecte,
+          ramasseTransporteur: Ramasse.Transporteur.Nom,
+          ramasseEnlevement: Ramasse.'Enlèvement'
+        }`),
+        // Achats S0 (libellés par collecte)
+        nql(`let x := select Achats where Collecte.${FILTER_S0}; x.{
+          collecteId: number(Collecte),
+          lib: 'libellé facturé'
+        }`),
+        // Achats L3M
+        nql(`let x := select Achats where Collecte.${FILTER_L3M}; x.{
+          collecteId: number(Collecte),
+          lib: 'libellé facturé'
+        }`)
       ]);
 
-      const allCollecteIds = [...idsCertains, ...idsIncertains];
-      const setIncertains  = new Set(idsIncertains.map(String));
-
-      if (!allCollecteIds.length) {
-        renderSplit([]);
-        document.getElementById('total-count').textContent = '0';
-        document.getElementById('last-update').textContent = new Date().toLocaleTimeString('fr-FR');
-        setStatus('live', 'En direct');
-        startProgress();
-        return;
-      }
-
-      // 2. Charger en parallèle : collectes + fermes + transporteurs
-      const [collecteMap, fermes, transporteurs] = await Promise.all([
-        batchFetch(TABLE_COLLECTE, allCollecteIds),
-        fetchAllRecords(TABLE_FERME),
-        fetchAllRecords(TABLE_TRANSPORT).catch(() => [])
-      ]);
-
-      // 3. Maps de référence
-      const fermeMap = {};
-      fermes.forEach(p => {
-        const f = p.fields || {};
-        fermeMap[p.id] = { nom: f['Nom de la ferme'] || `#${p.id}` };
+      // Index achats par collecteId
+      const achatsByCollecte = new Map();
+      [...achatsS0, ...achatsL3M].forEach(a => {
+        if (!a.collecteId) return;
+        const k = String(a.collecteId);
+        if (!achatsByCollecte.has(k)) achatsByCollecte.set(k, []);
+        if (a.lib) achatsByCollecte.get(k).push(a.lib);
       });
 
-      const transportMap = {};
-      transporteurs.forEach(p => {
-        const f = p.fields || {};
-        transportMap[p.id] = f['Nom'] || `#${p.id}`;
+      // Composer les données finales
+      const buildItem = (c, incertain) => ({
+        id:           String(c.id),
+        nom:          c.ferme || '?',
+        collecte:     c.collecte,
+        contenu:      achatsByCollecte.get(String(c.id)) || [],
+        ramasse:      (c.ramasseTransporteur || c.ramasseEnlevement) ? {
+          transporteur: c.ramasseTransporteur || '',
+          enlevement:   c.ramasseEnlevement || null
+        } : null,
+        incertain
       });
 
-      // 4. Identifier tous les IDs Achats et Ramasse à charger
-      const achatsIds = new Set();
-      const ramasseIds = new Set();
-      const collectes = [...collecteMap.values()];
-      collectes.forEach(c => {
-        const f = c.fields || {};
-        (Array.isArray(f.Arrivage) ? f.Arrivage : []).forEach(id => achatsIds.add(id));
-        if (f.Ramasse) {
-          const rId = Array.isArray(f.Ramasse) ? f.Ramasse[0] : f.Ramasse;
-          if (rId) ramasseIds.add(rId);
-        }
-      });
-
-      // 5. Fetch parallèle de tous les Achats et Ramasses
-      const [achatsMap, ramasseMap] = await Promise.all([
-        batchFetch(TABLE_ACHATS, [...achatsIds]),
-        batchFetch(TABLE_RAMASSE, [...ramasseIds])
-      ]);
-
-      // 6. Composer les données finales
-      const data = collectes.map(c => {
-        const f = c.fields || {};
-        const prodId  = Array.isArray(f.Producteur) ? f.Producteur[0] : f.Producteur;
-        const ferme   = fermeMap[prodId] || { nom: `#${prodId}` };
-
-        // Contenu : libellés des Achats liés
-        const achatLibelles = (Array.isArray(f.Arrivage) ? f.Arrivage : [])
-          .map(id => achatsMap.get(String(id)))
-          .filter(Boolean)
-          .map(a => (a.fields || {})['libellé facturé'])
-          .filter(Boolean);
-
-        // Ramasse : transporteur + heure d'enlèvement
-        let ramasse = null;
-        const rId = Array.isArray(f.Ramasse) ? f.Ramasse[0] : f.Ramasse;
-        if (rId) {
-          const r = ramasseMap.get(String(rId));
-          if (r) {
-            const rf = r.fields || {};
-            const tId = Array.isArray(rf.Transporteur) ? rf.Transporteur[0] : rf.Transporteur;
-            ramasse = {
-              transporteur: tId ? (transportMap[tId] || `#${tId}`) : '',
-              enlevement:   rf['Enlèvement'] || null
-            };
-          }
-        }
-
-        return {
-          id:          String(c.id),
-          nom:         ferme.nom,
-          collecte:    f.Collecte,
-          contenu:     achatLibelles,
-          ramasse:     ramasse,
-          incertain:   setIncertains.has('B' + c.id) || setIncertains.has(String(c.id))
-        };
-      });
+      const data = [
+        ...collectesS0.map(c => buildItem(c, false)),
+        ...collectesL3M.map(c => buildItem(c, true))
+      ];
 
       renderSplit(data);
 
@@ -354,7 +264,7 @@
     }
   }
 
-  // ── RENDER SPLIT ───────────────────────────────────────
+  // ── RENDER SPLIT ──────────────────────────────────────
   function renderSplit(data) {
     const certains   = data.filter(d => !d.incertain);
     const incertains = data.filter(d =>  d.incertain);
@@ -439,7 +349,7 @@
     container.appendChild(split);
   }
 
-  // ── CARTE ──────────────────────────────────────────────
+  // ── CARTE ─────────────────────────────────────────────
   function makeCard(item, i, uncertain) {
     const card = document.createElement('div');
     card.className = 'card' + (uncertain ? ' uncertain' : '');
@@ -518,7 +428,7 @@
     return card;
   }
 
-  // ── UTILS ──────────────────────────────────────────────
+  // ── UTILS ─────────────────────────────────────────────
   function setStatus(state, text) {
     document.getElementById('dot').className = 'dot ' + state;
     document.getElementById('status-text').textContent = text;
