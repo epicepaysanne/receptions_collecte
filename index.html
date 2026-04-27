@@ -100,6 +100,13 @@
     .gcol.uncertain .gcol-count { background: #f5e6c4; color: var(--warn-txt); }
 
     .gcol-scroll { overflow-y: auto; overflow-x: hidden; flex: 1; padding: 10px 8px; }
+    .gcol-scroll.two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0 8px;
+      align-content: start;
+    }
+    .gcol-scroll.two-col .card { break-inside: avoid; }
 
     .card {
       background: var(--card-bg); border: 1px solid var(--border); border-radius: 6px;
@@ -292,80 +299,58 @@
     const certains   = data.filter(d => !d.incertain);
     const incertains = data.filter(d =>  d.incertain);
 
-    // ── Calculer les jours restants de la semaine (lun→dim) à partir d'aujourd'hui
-    const today = new Date(); today.setHours(0,0,0,0);
-    const dow = today.getDay(); // 0=dim, 1=lun…
-    // Combien de jours jusqu'à dimanche inclus (1=dim → 0 ; 1=lun → 6)
-    const daysLeftInWeek = (dow === 0) ? 0 : 7 - dow;
-    // Date de fin de semaine (dimanche soir 23:59)
-    const endOfWeek = new Date(today);
-    endOfWeek.setDate(today.getDate() + daysLeftInWeek);
-    endOfWeek.setHours(23,59,59,999);
-
-    // ── Grouper certains par jour
-    const dayCols = new Map(); // key (YYYY-MM-DD) → {label, items, isThisWeek}
-    // Initialiser une colonne pour chaque jour de la semaine en cours (aujourd'hui inclus)
-    for (let i = 0; i <= daysLeftInWeek; i++) {
-      const d = new Date(today);
-      d.setDate(today.getDate() + i);
-      const key = d.toISOString().slice(0,10);
-      const label = JOURS[d.getDay()] + ' ' +
-        d.getDate().toString().padStart(2,'0') + '/' +
-        (d.getMonth()+1).toString().padStart(2,'0');
-      dayCols.set(key, { label, items: [], future: false });
-    }
-    // Ajouter les certains dans leur colonne (créer colonne future si > fin de semaine)
+    // ── Grouper certains par jour (uniquement les jours qui ont des collectes)
+    const dayMap = new Map(); // key (YYYY-MM-DD) → {label, items}
     certains.forEach(item => {
       const d = new Date(item.collecte);
       const key = d.toISOString().slice(0,10);
-      if (!dayCols.has(key)) {
+      if (!dayMap.has(key)) {
         const label = JOURS[d.getDay()] + ' ' +
           d.getDate().toString().padStart(2,'0') + '/' +
           (d.getMonth()+1).toString().padStart(2,'0');
-        dayCols.set(key, { label, items: [], future: true });
+        dayMap.set(key, { label, items: [] });
       }
-      dayCols.get(key).items.push(item);
+      dayMap.get(key).items.push(item);
     });
 
-    // ── Séparer les incertains
-    const incertSemaine = [];
-    const incertAutres = [];
-    incertains.forEach(item => {
-      const d = new Date(item.collecte);
-      if (d >= today && d <= endOfWeek) incertSemaine.push(item);
-      else incertAutres.push(item);
-    });
-
-    // ── Construire la liste finale des colonnes
-    const allCols = [];
-    [...dayCols.entries()].sort((a,b) => a[0].localeCompare(b[0])).forEach(([key, col]) => {
-      allCols.push({
+    // Trier les jours par date
+    const dayCols = [...dayMap.entries()]
+      .sort((a,b) => a[0].localeCompare(b[0]))
+      .map(([_, col]) => ({
         type: 'day',
         label: col.label,
         items: col.items.sort((a,b) => new Date(a.collecte) - new Date(b.collecte)),
         uncertain: false
-      });
-    });
-    allCols.push({
-      type: 'uncert-week',
-      label: '⚠ Incertains · cette semaine',
-      items: incertSemaine.sort((a,b) => new Date(a.collecte) - new Date(b.collecte)),
-      uncertain: true
-    });
-    allCols.push({
-      type: 'uncert-other',
-      label: '⚠ Incertains · autres',
-      items: incertAutres.sort((a,b) => new Date(b.collecte) - new Date(a.collecte)),
-      uncertain: true
-    });
+      }));
+
+    // ── Une seule colonne incertains, triée par date la plus récente d'abord
+    const incertCol = {
+      type: 'uncert',
+      label: '⚠ Incertains',
+      items: incertains.sort((a,b) => new Date(b.collecte) - new Date(a.collecte)),
+      uncertain: true,
+      double: true
+    };
+
+    // ── Construire la grille : incertains à GAUCHE (largeur 2) puis les jours
+    const allCols = incertains.length ? [incertCol, ...dayCols] : dayCols;
+
+    // Calcul du nombre d'unités de largeur (jours = 1, incertains = 2)
+    const totalUnits = allCols.reduce((s, c) => s + (c.double ? 2 : 1), 0);
 
     // ── RENDER
     const container = document.getElementById('board-container');
     container.innerHTML = '';
 
+    if (!allCols.length) {
+      container.innerHTML = '<div class="state"><div class="icon">📭</div>Aucune collecte à afficher.</div>';
+      return;
+    }
+
     const grid = document.createElement('div');
     grid.className = 'grid-board';
-    grid.style.setProperty('--n-cols', allCols.length);
+    // Construire grid-template-columns avec les bonnes largeurs
+    grid.style.gridTemplateColumns = allCols.map(c => c.double ? '2fr' : '1fr').join(' ');
 
     allCols.forEach(col => {
       const c = document.createElement('div');
@@ -382,6 +367,10 @@
       if (!col.items.length) {
         scroll.innerHTML = '<div class="empty">—</div>';
       } else {
+        // Pour la colonne incertains double, afficher en grille 2 colonnes
+        if (col.double) {
+          scroll.classList.add('two-col');
+        }
         col.items.forEach((item, i) => scroll.appendChild(makeCard(item, i, col.uncertain)));
       }
 
